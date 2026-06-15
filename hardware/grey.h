@@ -16,9 +16,4 @@ typedef enum{
 void read_all_adc(uint16_t out_buf[8]);
 
 
-
-
-
-
-
 #endif
