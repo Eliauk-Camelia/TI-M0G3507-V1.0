@@ -37,10 +37,15 @@ volatile uint32_t g_tick_ms = 0;  /* 1ms 系统滴答计数器, 由 TIMER_0 ISR 
 int main(void)
 {
     SYSCFG_DL_init();
+<<<<<<< Updated upstream
 
     NVIC_EnableIRQ(TIMER_0_INST_INT_IRQN);
     DL_TimerG_startCounter(TIMER_0_INST);
 
+=======
+    LCD_Init();
+    
+>>>>>>> Stashed changes
     while (1) {
         /* 应用代码在此运行, g_tick_ms 每 1ms 自动递增 */
     }

@@ -2,7 +2,7 @@
 #include "grey.h"
 
 /**
- * @brief 切换多路模拟开关3位地址线（AD2 AD1 AD0）
+ * @brief 切换多路模拟开关3位地址线（AD2 AD1 AD0）  PA24 25 26 
  * @param channel 目标通道 channel_1 ~ channel_8
  */
 static void __toggle_GPIO(CHANNEL_t channel)
@@ -43,10 +43,13 @@ static void __toggle_GPIO(CHANNEL_t channel)
 }
 
 /**
- * @brief 单次读取ADC原始12位采样值
+ * @brief 单次读取ADC原始12位采样值 (PA27)
  * @return 0~4095 ADC采样结果
+ *
+ * @note 使用新版 DL_ADC12_* API，Grey_ADC_INST / Grey_ADC_ADCMEM_0 由 SysConfig 生成。
+ *       DL_ADC12_startConversion() 内置 SC+ENC 位，轮询 STATUS 寄存器等待转换完成。
  */
-static uint16_t __read_adc(void)
+static uint16_t __read_adc(void)            // PA27
 {
     DL_ADC12_startConversion(Grey_ADC_INST);
     /* 轮询等待转换完成 (BUSY 位清零) */
