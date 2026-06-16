@@ -38,19 +38,12 @@ int main(void)
 {
     SYSCFG_DL_init();
 <<<<<<< Updated upstream
-<<<<<<< Updated upstream
 
-    NVIC_EnableIRQ(TIMER_0_INST_INT_IRQN);
-    DL_TimerG_startCounter(TIMER_0_INST);
+    LCD_Init();                              /* 初始化 ST7735S LCD */
 
-=======
-    LCD_Init();
-    
->>>>>>> Stashed changes
-=======
-    LCD_Init();
-    
->>>>>>> Stashed changes
+    NVIC_EnableIRQ(TIMER_0_INST_INT_IRQN);   /* 使能 1ms 定时中断 */
+    DL_TimerG_startCounter(TIMER_0_INST);    /* 启动 TIMG0 递减计数 */
+
     while (1) {
         /* 应用代码在此运行, g_tick_ms 每 1ms 自动递增 */
     }
