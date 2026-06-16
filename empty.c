@@ -33,13 +33,13 @@
 #include "ti_msp_dl_config.h"
 #include "hardware/lcd.h"
 #include "hardware/lcd_init.h"
-#include "hardware/grey.h"
+#include "hardware/mpu6050.h"
 
 /*
- * 感为灰度传感器 串行模式
+ * MPU6050 姿态角实时显示
  *
- * CLK=PA24(AD0)  DAT=PA25(AD1)
- * 每 200ms 读取一次 8 路数字量 (0=黑, 1=白)
+ * I2C: PA0=SCL, PA1=SDA, 400kHz
+ * 每 100ms 读取一次, 显示 Pitch/Roll/Yaw
  */
 
 int main(void)
@@ -47,35 +47,35 @@ int main(void)
     SYSCFG_DL_init();
     LCD_Init();
 
-    /* 初始化传感器串行模式 */
-    grey_init();
-     /* 读取 8 路数字量 */
-    uint8_t digital = grey_read_digital();
-    /* 清屏 */
-    LCD_Fill(0, 0, 160, 80, WHITE);
-
-    /* 标题 */
-    LCD_ShowString(0, 0, (const uint8_t *)"GW Serial",
-                    BLACK, WHITE, 16, 0);
+    /* 初始化 MPU6050 */
+    MPU6050_Init();
 
     while (1) {
-       
-        
-        /* 8 通道: 4列 × 2行 */
-        for (int i = 0; i < 8; i++) {
-            int col = i % 4;
-            int row = i / 4;
-            uint16_t x = 2 + col * 40;
-            uint16_t y = 22 + row * 28;
+        /* 读取姿态 */
+        MPU6050_Read();
 
-            LCD_ShowIntNum(x, y, i + 1, 1, BLACK, WHITE, 16);
-            LCD_ShowString(x + 8, y, (const uint8_t *)":",
-                           GRAY, WHITE, 16, 0);
-            /* 显示 0 或 1 */
-            LCD_ShowIntNum(x + 16, y, (digital >> i) & 1, 1,
-                           RED, WHITE, 16);
-        }
+        /* 清屏 */
+        LCD_Fill(0, 0, 160, 80, WHITE);
 
-        delay_ms(200);
+        /* 标题 */
+        LCD_ShowString(0, 0, (const uint8_t *)"MPU6050",
+                       BLACK, WHITE, 16, 0);
+
+        /* Pitch */
+        LCD_ShowString(0, 22, (const uint8_t *)"P:",
+                       RED, WHITE, 16, 0);
+        LCD_ShowFloatNum1(18, 22, mpu_angle.pitch, 5, BLACK, WHITE, 16);
+
+        /* Roll */
+        LCD_ShowString(0, 42, (const uint8_t *)"R:",
+                       GREEN, WHITE, 16, 0);
+        LCD_ShowFloatNum1(18, 42, mpu_angle.roll, 5, BLACK, WHITE, 16);
+
+        /* Yaw */
+        LCD_ShowString(0, 62, (const uint8_t *)"Y:",
+                       BLUE, WHITE, 16, 0);
+        LCD_ShowFloatNum1(18, 62, mpu_angle.yaw, 5, BLACK, WHITE, 16);
+
+        delay_ms(100);
     }
 }

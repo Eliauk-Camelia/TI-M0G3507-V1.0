@@ -12,6 +12,8 @@
 const SYSCTL = scripting.addModule("/ti/driverlib/SYSCTL");
 const ADC12  = scripting.addModule("/ti/driverlib/ADC12", {}, false);
 const ADC121 = ADC12.addInstance();
+const I2C    = scripting.addModule("/ti/driverlib/I2C", {}, false);
+const I2C1   = I2C.addInstance();
 const GPIO   = scripting.addModule("/ti/driverlib/GPIO", {}, false);
 const GPIO_Grey  = GPIO.addInstance();
 const GPIO_DAT   = GPIO.addInstance();
@@ -21,8 +23,6 @@ const GPIO_DC    = GPIO.addInstance();
 const GPIO_RES   = GPIO.addInstance();
 const GPIO_MOSI  = GPIO.addInstance();
 const GPIO_SCLK  = GPIO.addInstance();
-const GPIO_I2C_SCL = GPIO.addInstance();
-const GPIO_I2C_SDA = GPIO.addInstance();
 const TIMER  = scripting.addModule("/ti/driverlib/TIMER", {}, false);
 const TIMER1 = TIMER.addInstance();
 const Board  = scripting.addModule("/ti/driverlib/Board", {}, false);
@@ -103,19 +103,12 @@ GPIO_SCLK.port                         = "PORTA";
 GPIO_SCLK.associatedPins[0].$name      = "PIN_31";
 GPIO_SCLK.associatedPins[0].assignedPin = "31";
 
-/* ---- GPIO: 灰度传感器 I2C SCL (PA15, 开漏) ---- */
-GPIO_I2C_SCL.$name                          = "GRAY_SCL";
-GPIO_I2C_SCL.port                           = "PORTA";
-GPIO_I2C_SCL.associatedPins[0].$name        = "PIN_15";
-GPIO_I2C_SCL.associatedPins[0].initialValue = "SET";
-GPIO_I2C_SCL.associatedPins[0].assignedPin  = "15";
-
-/* ---- GPIO: 灰度传感器 I2C SDA (PA16, 开漏) ---- */
-GPIO_I2C_SDA.$name                          = "GRAY_SDA";
-GPIO_I2C_SDA.port                           = "PORTA";
-GPIO_I2C_SDA.associatedPins[0].$name        = "PIN_16";
-GPIO_I2C_SDA.associatedPins[0].initialValue = "SET";
-GPIO_I2C_SDA.associatedPins[0].assignedPin  = "16";
+/* ---- I2C: MPU6050 传感器 (Fast Mode 400kHz) ---- */
+I2C1.$name                           = "I2C_MPU6050";
+I2C1.basicEnableController           = true;
+I2C1.basicControllerStandardBusSpeed = "Fast";
+I2C1.peripheral.sclPin.$assign       = "PA15";
+I2C1.peripheral.sdaPin.$assign       = "PA16";
 
 /* ---- TIMER: TIMG0 1ms 周期中断 ---- */
 TIMER1.$name              = "TIMER_0";
@@ -136,9 +129,9 @@ GPIO_DC.associatedPins[0].pin.$suggestSolution    = "PB24";
 GPIO_RES.associatedPins[0].pin.$suggestSolution   = "PB20";
 GPIO_MOSI.associatedPins[0].pin.$suggestSolution  = "PA28";
 GPIO_SCLK.associatedPins[0].pin.$suggestSolution  = "PA31";
-GPIO_I2C_SCL.associatedPins[0].pin.$suggestSolution = "PA15";
-GPIO_I2C_SDA.associatedPins[0].pin.$suggestSolution = "PA16";
 GPIO_DAT.associatedPins[0].pin.$suggestSolution     = "PA25";
+I2C1.peripheral.sclPin.$suggestSolution             = "PA15";
+I2C1.peripheral.sdaPin.$suggestSolution             = "PA16";
 Board.peripheral.$suggestSolution                 = "DEBUGSS";
 Board.peripheral.swclkPin.$suggestSolution        = "PA20";
 Board.peripheral.swdioPin.$suggestSolution        = "PA19";
