@@ -38,6 +38,7 @@ int main(void)
 {
     SYSCFG_DL_init();
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 
     NVIC_EnableIRQ(TIMER_0_INST_INT_IRQN);
     DL_TimerG_startCounter(TIMER_0_INST);

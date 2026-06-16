@@ -17,6 +17,7 @@ const GPIO_Grey  = GPIO.addInstance();
 const GPIO_LCD_A = GPIO.addInstance();
 const GPIO_LCD_B = GPIO.addInstance();
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 const TIMER  = scripting.addModule("/ti/driverlib/TIMER", {}, false);
 const TIMER1 = TIMER.addInstance();
 =======
@@ -79,6 +80,7 @@ GPIO_LCD_B.associatedPins[1].pin.$assign = "PB12";
 GPIO_LCD_B.associatedPins[2].$name       = "BLK";
 GPIO_LCD_B.associatedPins[2].pin.$assign = "PB19";
 
+<<<<<<< Updated upstream
 <<<<<<< Updated upstream
 /* ---- TIMER: TIMG0 1ms 周期中断 ---- */
 TIMER1.$name              = "TIMER_0";
