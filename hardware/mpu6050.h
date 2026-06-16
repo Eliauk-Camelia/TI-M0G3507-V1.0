@@ -1,9 +1,9 @@
 /**
  * @file  mpu6050.h
- * @brief MPU6050 6 轴传感器驱动 (I2C, 无中断引脚, 无 DMP)
+ * @brief MPU6050 DMP 驱动 (基于 Invensense DMP 库)
  *
- * 功能: 初始化 → 读原始数据 → 计算 Pitch/Roll/Yaw
- * I2C 地址: 0x68 (AD0=GND)
+ * I2C: PA15=SCL, PA16=SDA, 400kHz
+ * 使用 DMP 内部 200Hz 6 轴融合四元数, 无需 MCU 做姿态解算。
  */
 
 #ifndef __MPU6050_H
@@ -15,30 +15,19 @@
 extern "C" {
 #endif
 
-/** 姿态角数据结构 */
 typedef struct {
-    float pitch;   /* 俯仰角 (度), -90~+90, 由加速度计计算 */
-    float roll;    /* 横滚角 (度), -180~+180, 由加速度计计算 */
-    float yaw;     /* 偏航角 (度), 由陀螺仪积分, 会漂移 */
+    float pitch;
+    float roll;
+    float yaw;
 } mpu_angle_t;
 
 extern mpu_angle_t mpu_angle;
 
-/**
- * @brief 初始化 MPU6050
- *
- * 步骤: I2C SDA 解锁 → 唤醒 → 配置量程 → 读取验证
- * 失败时无限循环 (软复位)
- */
+/** 初始化 MPU6050 + DMP */
 void MPU6050_Init(void);
 
-/**
- * @brief 读取原始数据并更新姿态角
- *
- * 从 MPU6050 读取 6 轴原始数据 (加速度计 3 轴 + 陀螺仪 3 轴),
- * 计算 Pitch/Roll (加速度计) 和 Yaw (陀螺仪积分)。
- */
-void MPU6050_Read(void);
+/** 从 DMP FIFO 读取四元数并计算欧拉角 */
+int MPU6050_Read(void);
 
 #ifdef __cplusplus
 }

@@ -1,6 +1,6 @@
 # TI-M0G3507-V1.0
 
-基于 TI MSPM0G3507 的嵌入式固件工程，集成感为灰度传感器（串行模式）+ ST7735S LCD 实时显示。
+基于 TI MSPM0G3507 的嵌入式固件工程，集成 MPU6050 姿态传感器 + 感为灰度传感器 + ST7735S LCD 显示。
 
 ## 硬件平台
 
@@ -11,6 +11,7 @@
 | **调试器** | XDS110 (SWD: PA20=SWCLK, PA19=SWDIO) |
 | **LCD** | ST7735S (160×80, 横屏, RGB565) |
 | **灰度传感器** | 感为 8 路灰度 + 辅助板 (串行 CLK+DAT 协议) |
+| **姿态传感器** | MPU6050 6 轴 (I2C, 400kHz, 无 DMP/中断) |
 
 ## 工具链
 
@@ -52,8 +53,21 @@ SYSOSC (32 MHz) → SYSPLL ×2 → ÷2 → ÷2 → 32 MHz CPUCLK
 - 2 线串行协议：CLK 下降沿读 DAT, 上升沿辅助板更新下一位
 - **首时钟丢弃**：读取前先发一个 dummy 时钟周期, 否则数据右移一位
 - 返回 8 位数字量 (bit0~bit7 对应探头 1~8, 0=黑, 1=白)
-- 参考例程：`/home/arch/work-space/stm32-soace/感为灰度STM32F1xx标准库例程/`
-- 辅助板教程：https://www.bilibili.com/video/BV1ZdHSzCEGN/
+- 参考：`/home/arch/work-space/stm32-soace/感为灰度STM32F1xx标准库例程/`
+
+### MPU6050 (硬件 I2C)
+
+| 功能 | 引脚 | 实例名 | 说明 |
+|------|------|--------|------|
+| SCL | PA15 | I2C_MPU6050 | I2C 时钟, 400kHz Fast Mode |
+| SDA | PA16 | I2C_MPU6050 | I2C 数据 |
+
+- I2C 地址: 0x68 (AD0=GND)
+- 不使用中断引脚, 轮询读取
+- 不使用 DMP (数字运动处理器), 直接读原始数据计算姿态
+- Pitch/Roll 由加速度计计算, Yaw 由陀螺仪 Z 轴积分
+- 读取频率: 10Hz (每 100ms)
+- 参考：`/home/arch/work-space/project-space/ProgramForCar-Main_Develop/`
 
 ### LCD (ST7735S 软件 SPI)
 
@@ -67,28 +81,27 @@ SYSOSC (32 MHz) → SYSPLL ×2 → ÷2 → ÷2 → 32 MHz CPUCLK
 | BLK  | PB19 | BLK | 背光 PNP 管 (低电平点亮) |
 
 **关键注意：**
-- LCD 引脚使用**独立 GPIO 实例**，不可用分组 (`LCD_A`/`LCD_B`)
+- LCD 引脚使用**独立 GPIO 实例**，不可用分组
 - `lcd_init.h` 中的宏名必须与 SysConfig 实例名一致
 - MADCTL 固定为 `0x78` (横屏方向)
-- `LCD_ShowChar` 使用 LSB 优先 (`temp & 0x01`) 逐点绘制，避免字符镜像和 12px 字体错位
+- `LCD_ShowChar` 使用 LSB 优先 (`temp & 0x01`) 逐点绘制
 - Mode=0 必须同时绘制背景像素，否则旧数据残留
 
 ## 项目结构
 
 ```
 TI-M0G3507-V1.0/
-├── empty.c              # 主程序 — 灰度传感器串行读取 + LCD 显示
+├── empty.c              # 主程序 — MPU6050 姿态显示
 ├── empty.syscfg         # SysConfig 外设配置
 ├── hardware/
 │   ├── delay.h/c        # delay_ms/delay_us (delay_cycles 忙等待)
 │   ├── grey.h/c         # 灰度传感器串行接口驱动 (CLK+DAT)
-│   ├── gray.h/c         # 灰度传感器 I2C 驱动 (备用, 当前未使用)
-│   ├── sw_i2c.h/c       # 通用软件 I2C 驱动 (备用, 当前未使用)
-│   ├── lcd.h/c          # ST7735S 绘图函数 (Fill/Line/Circle/String/Int/Float)
-│   ├── lcd_init.h/c     # ST7735S 软件 SPI + 初始化序列
-│   ├── lcdfont.h        # ASCII 字库 (12×6 / 16×8 / 24×12 / 32×16)
-│   └── delay.h/c        # 毫秒/微秒忙等待延时
-├── Debug/               # 构建产物 (makefile 等, 自动生成)
+│   ├── mpu6050.h/c      # MPU6050 驱动 (I2C 读写 + 姿态计算)
+│   ├── mspm0_i2c.h/c    # MSPM0 硬件 I2C 封装 (DL_I2C, SDA 解锁)
+│   ├── lcd.h/c          # ST7735S 绘图函数
+│   ├── lcd_init.h/c     # ST7735S 软件 SPI 驱动 + 初始化
+│   └── lcdfont.h        # ASCII 字库 (12×6 / 16×8 / 24×12 / 32×16)
+├── Debug/               # 构建产物 (makefile, 自动生成)
 └── targetConfigs/       # XDS110 调试配置
 ```
 
@@ -97,8 +110,9 @@ TI-M0G3507-V1.0/
 | 模块 | 实例名 | 用途 |
 |------|--------|------|
 | SYSCTL | — | 时钟树 (32 MHz) |
-| GPIO | Grey | CLK 时钟输出 (PA24) |
-| GPIO | DAT | DAT 数据输入, 悬浮 (PA25) |
+| I2C | I2C_MPU6050 | MPU6050 通信 (PA15/PA16, 400kHz) |
+| GPIO | Grey | 灰度传感器 CLK 输出 (PA24) |
+| GPIO | DAT | 灰度传感器 DAT 输入, 悬浮 (PA25) |
 | GPIO | BLK | LCD 背光 (PB19) |
 | GPIO | CS | LCD 片选 (PA23) |
 | GPIO | DC | LCD 数据/命令 (PB24) |
@@ -123,14 +137,19 @@ dslite -c targetConfigs/MSPM0G3507.ccxml -e -r 2 -u Debug/TI-M0G3507-V1.0.out
 ## 程序运行流程
 
 ```
-SYSCFG_DL_init()           ← SysConfig 生成的时钟+GPIO 初始化
+SYSCFG_DL_init()           ← SysConfig 生成的时钟+GPIO+I2C 初始化
 
 main()
     ├── LCD_Init()         ← ST7735S 初始化 + 清屏
-    ├── grey_init()        ← 灰度传感器串行模式唤醒
-    ├── LCD_Fill()         ← 清屏
+    ├── MPU6050_Init()     ← I2C SDA 解锁 + 唤醒 + 配置量程
     └── while(1)
-        ├── grey_read_digital()   ← 读 8 路探头数字量 (0/1)
-        └── LCD 显示 4×2 网格数据
-            delay_ms(200)         ← 200ms 刷新间隔
+        ├── MPU6050_Read() ← 读 14 字节原始数据 → 计算 Pitch/Roll/Yaw
+        └── LCD 显示姿态角
+            delay_ms(100)  ← 100ms (10Hz) 刷新
 ```
+
+## SysConfig 注意事项
+
+- `internalResistor` 合法值: `NONE`, `PULL_UP`, `PULL_DOWN` (没有 `PULL_DISABLE`)
+- 生成宏名前缀: GPIO 实例用 `{name}_PORT/{name}_{pin}_PIN`, I2C 实例用 `GPIO_I2C_{name}_*`
+- CCS 重新生成 makefile 后会覆盖手动编辑，新文件需重新添加到 `ORDERED_OBJS`
