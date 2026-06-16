@@ -113,6 +113,7 @@ I2C1.peripheral.sdaPin.$assign       = "PA16";
 /* ---- TIMER: TIMG0 1ms 周期中断 ---- */
 TIMER1.$name              = "TIMER_0";
 TIMER1.timerClkSrc        = "BUSCLK";
+TIMER1.timerMode          = "PERIODIC";
 TIMER1.timerPeriod        = "1 ms";
 TIMER1.interrupts         = ["ZERO"];
 TIMER1.timerClkPrescale   = 8;
