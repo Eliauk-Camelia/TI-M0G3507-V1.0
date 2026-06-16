@@ -59,11 +59,31 @@ CPUCLK=32MHz，编译器优化 `-O2`，`-march=thumbv6m -mcpu=cortex-m0plus -mth
 | SCL | PA15 | I2C_MPU6050 |
 | SDA | PA16 | I2C_MPU6050 |
 
+## SysConfig 外设一览
+
+| 模块 | 实例名 | 用途 | 关键参数 |
+|------|--------|------|---------|
+| SYSCTL | — | 时钟树 32MHz | SYSOSC→PLL×2→÷2→÷2 |
+| I2C | I2C_MPU6050 | MPU6050 (PA15/PA16) | 400kHz Fast Mode |
+| TIMER | TIMER_0 | 1ms 周期中断 (TIMG0) | BUSCLK, prescale=8, ZERO 中断 |
+| ADC12 | Grey_ADC | 灰度模拟输入 (PA27) | ULPCLK/8, 软件触发, 轮询 |
+| GPIO | Grey (AD0) | 灰度 CLK 输出 (PA24) | — |
+| GPIO | DAT (PIN_25) | 灰度 DAT 输入 (PA25) | 悬浮输入 |
+| GPIO | BLK (PIN_19) | LCD 背光 (PB19) | 低电平点亮 |
+| GPIO | CS (PIN_23) | LCD 片选 (PA23) | — |
+| GPIO | DC (PIN_24) | LCD 数据/命令 (PB24) | — |
+| GPIO | RES (PIN_20) | LCD 复位 (PB20) | — |
+| GPIO | MOSI (PIN_28) | LCD 数据 (PA28) | — |
+| GPIO | SCLK (PIN_31) | LCD 时钟 (PA31) | — |
+| Board | — | 调试接口 (PA19/PA20) | SWD |
+
+**ADC12 注意**：Grey_ADC (PA27) 已在 SysConfig 配置但当前应用代码未使用——灰度传感器走数字串行协议 (CLK+DAT)，ADC 为后续扩展预留。
+
 ## SysConfig 关键规则
 
 - `empty.syscfg` 是外设配置唯一可编辑入口，构建时生成 `Debug/ti_msp_dl_config.c/h`——**不可手动编辑**
 - `internalResistor` 合法值：`NONE`, `PULL_UP`, `PULL_DOWN`（没有 `PULL_DISABLE`）
-- 生成宏名前缀：GPIO 实例用 `{name}_PORT`/`{name}_{pin}_PIN`，I2C 外设用 `GPIO_I2C_{name}_*`
+- 生成宏名前缀：GPIO 实例用 `{name}_PORT`/`{name}_{pin}_PIN`，I2C 外设用 `GPIO_I2C_{name}_*`，TIMER 实例用 `{name}_INST`/`{name}_INST_INT_IRQN`
 - SysConfig 每次运行覆盖 `device.opt`，需要持久化的宏定义写在源码里不要放 `device.opt`
 
 ## 源码结构
@@ -83,6 +103,27 @@ hardware/
 ├── dmpKey.h         # DMP 固件密钥
 └── dmpmap.h         # DMP 内存映射
 ```
+
+## 主循环架构（非阻塞定时器驱动）
+
+`TIMER_0` (TIMG0) 提供 1ms 周期中断（BUSCLK, prescale=8, ZERO 匹配）：
+
+```
+TIMER_0 ISR (1ms)
+  ├── g_tick++            ← 1ms 滴答计数
+  ├── tick_ms = g_tick    ← 同步 clock.c（供 DMP 库 get_ms 回调）
+  └── if (g_tick % 100 == 0) → g_refresh = 1   ← 100ms 刷新标志
+
+main() 非阻塞循环
+  ├── if (g_refresh) { MPU6050_Read(); LCD 刷新; }
+  └── /* 其他非阻塞任务: 灰度/按键/串口等 */
+```
+
+**关键点**：
+- `tick_ms` 声明在 `clock.c`，由 `empty.c` 的 ISR 更新——`mspm0_get_clock_ms()` 被 DMP 库内部调用获取时间戳
+- `mspm0_delay_ms()` 直接调用忙等待 `delay_ms()`，不依赖 `tick_ms`（避免 DMP 初始化阶段 ISR 依赖问题）
+- `g_refresh` 标志位模式确保 MPU6050 FIFO 读取和 LCD 刷新不会阻塞其他任务
+- 如果 TIMER_0 配置有变动，需同步更新 `empty.syscfg` 中的 `timerPeriod`、`timerClkPrescale` 及 ISR 中的取模值（100ms = `period * N`）
 
 ## LCD 子系统（已验证的坑）
 
