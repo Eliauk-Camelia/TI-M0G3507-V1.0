@@ -132,7 +132,6 @@ void LCD_ShowChar(uint16_t x, uint16_t y, uint8_t num,
     TypefaceNum = (sizex / 8 + ((sizex % 8) ? 1 : 0)) * sizey;
     num = num - ' ';  /* 偏移到字库起始位置 */
 
-    LCD_Address_Set(x, y, x + sizex - 1, y + sizey - 1);
     for (i = 0; i < TypefaceNum; i++) {
         if (sizey == 12) temp = ascii_1206[num][i];
         else if (sizey == 16) temp = ascii_1608[num][i];
@@ -141,19 +140,16 @@ void LCD_ShowChar(uint16_t x, uint16_t y, uint8_t num,
         else return;
 
         for (t = 0; t < 8; t++) {
-            if (!mode) {
-                LCD_WR_DATA((temp & 0x80) ? fc : bc);
-                temp <<= 1;
-            } else {
-                if (temp & 0x80)
-                    LCD_DrawPoint(x, y, fc);
-                temp <<= 1;
-                x++;
-                if ((x - x0) == sizex) {
-                    x = x0;
-                    y++;
-                    break;
-                }
+            if (temp & 0x01)
+                LCD_DrawPoint(x, y, fc);
+            else if (!mode)
+                LCD_DrawPoint(x, y, bc);  /* mode=0: 填充背景 */
+            temp >>= 1;
+            x++;
+            if ((x - x0) == sizex) {
+                x = x0;
+                y++;
+                break;
             }
         }
     }

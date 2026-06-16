@@ -1,73 +1,81 @@
+/**
+ * @file  grey.c
+ * @brief 感为灰度传感器 串行接口驱动 (MSPM0)
+ *
+ * 2 线串行协议:
+ *   CLK → PA24 (Grey_AD0), MCU 输出
+ *   DAT → PA25 (DAT_PIN_25), MCU 输入 (外部上拉)
+ *
+ * 时序: CLK 下降沿 → 读 DAT → CLK 上升沿 → 传感器更新下一位
+ * 8 个时钟周期读完 8 路探头的数字量 (bit0~bit7)
+ *
+ * 参考: 感为 STM32 例程 gw_gray_serial.c
+ */
+
 #include "ti_msp_dl_config.h"
 #include "grey.h"
 
-/**
- * @brief 切换多路模拟开关3位地址线（AD2 AD1 AD0）  PA24 25 26 
- * @param channel 目标通道 channel_1 ~ channel_8
- */
-static void __toggle_GPIO(CHANNEL_t channel)
-{
-    // 先清空全部地址线，消除上一通道电平残留
-    DL_GPIO_clearPins(Grey_PORT, Grey_AD0_PIN | Grey_AD1_PIN | Grey_AD2_PIN);
+#define CLK_PORT  Grey_PORT
+#define CLK_PIN   Grey_AD0_PIN        /* PA24, 输出 */
+/* DAT_PORT / DAT_PIN_25_PIN / DAT_PIN_25_IOMUX 由 SysConfig 直接生成 */
 
-    switch (channel) {
-        case channel_1: // 000
-            break;
-        case channel_2: // 001 AD0=1
-            DL_GPIO_writePins(Grey_PORT, Grey_AD0_PIN);
-            break;
-        case channel_3: // 010 AD1=1
-            DL_GPIO_writePins(Grey_PORT, Grey_AD1_PIN);
-            break;
-        case channel_4: // 011 AD0+AD1=1
-            DL_GPIO_writePins(Grey_PORT, Grey_AD0_PIN | Grey_AD1_PIN);
-            break;
-        case channel_5: // 100 AD2=1
-            DL_GPIO_writePins(Grey_PORT, Grey_AD2_PIN);
-            break;
-        case channel_6: // 101 AD2+AD0=1
-            DL_GPIO_writePins(Grey_PORT, Grey_AD2_PIN | Grey_AD0_PIN);
-            break;
-        case channel_7: // 110 AD2+AD1=1
-            DL_GPIO_writePins(Grey_PORT, Grey_AD2_PIN | Grey_AD1_PIN);
-            break;
-        case channel_8: // 111 AD2+AD1+AD0=1
-            DL_GPIO_writePins(Grey_PORT, Grey_AD2_PIN | Grey_AD1_PIN | Grey_AD0_PIN);
-            break;
-        default:
-            // 非法通道，保持全部低电平
-            break;
-    }
-    // 增加建立延时，模拟开关电压稳定（DriverLib 延时接口）
-    delay_cycles(1500);
+/* ~5μs 延迟 @32MHz (160 cycles / 3 ≈ 53 loop) */
+#define SERIAL_DELAY  160
+
+static void serial_delay(void)
+{
+    delay_cycles(SERIAL_DELAY);
 }
 
 /**
- * @brief 单次读取ADC原始12位采样值 (PA27)
- * @return 0~4095 ADC采样结果
+ * @brief 读取 8 路探头数字量 (串行协议)
  *
- * @note 使用新版 DL_ADC12_* API，Grey_ADC_INST / Grey_ADC_ADCMEM_0 由 SysConfig 生成。
- *       DL_ADC12_startConversion() 内置 SC+ENC 位，轮询 STATUS 寄存器等待转换完成。
+ * CLK 空闲高 → 拉低 → 读 DAT → 拉高 → 传感器准备下一位
+ * bit0=探头1, bit7=探头8
  */
-static uint16_t __read_adc(void)            // PA27
+uint8_t grey_read_digital(void)
 {
-    DL_ADC12_startConversion(Grey_ADC_INST);
-    /* 轮询等待转换完成 (BUSY 位清零) */
-    while (DL_ADC12_getStatus(Grey_ADC_INST) & DL_ADC12_STATUS_CONVERSION_ACTIVE);
-    uint16_t adcRaw = DL_ADC12_getMemResult(Grey_ADC_INST, Grey_ADC_ADCMEM_0);
-    return adcRaw;
+    uint8_t ret = 0;
+
+    /* 首时钟丢弃: 辅助板首周期数据不稳定, 读完 9 位取后 8 位 */
+    DL_GPIO_clearPins(CLK_PORT, CLK_PIN);
+    serial_delay();
+    DL_GPIO_setPins(CLK_PORT, CLK_PIN);
+    serial_delay();
+
+    for (uint8_t i = 0; i < 8; i++) {
+        /* 下降沿: 锁存当前位 */
+        DL_GPIO_clearPins(CLK_PORT, CLK_PIN);
+        serial_delay();
+
+        /* 读 DAT */
+        if (DL_GPIO_readPins(DAT_PORT, DAT_PIN_25_PIN)) {
+            ret |= (1 << i);
+        }
+
+        /* 上升沿: 准备下一位 */
+        DL_GPIO_setPins(CLK_PORT, CLK_PIN);
+        serial_delay();
+    }
+
+    return ret;
 }
 
 /**
- * @brief 读取全部8路模拟开关ADC通道
- * @param out_buf 输出数组，长度≥8，存储8通道采样值
- * @note 替代返回静态数组方案，消除重入/数据覆盖风险
+ * @brief 初始化传感器 (串行模式)
+ *
+ * 发送特殊时序使传感器进入串行模式
+ * CLK 拉低 100μs → 拉高 → 等待稳定
  */
-void read_all_adc(uint16_t out_buf[8])
+void grey_init(void)
 {
-    for (CHANNEL_t i = channel_1; i < channel_ALL; i++)
-    {
-        __toggle_GPIO(i);
-        out_buf[i] = __read_adc();
-    }
+    /* 确保 CLK 初始为高 */
+    DL_GPIO_setPins(CLK_PORT, CLK_PIN);
+    delay_cycles(3200);  /* 100μs */
+
+    /* 发一个脉冲: 低→高, 唤醒传感器串行模式 */
+    DL_GPIO_clearPins(CLK_PORT, CLK_PIN);
+    delay_cycles(3200);  /* 100μs */
+    DL_GPIO_setPins(CLK_PORT, CLK_PIN);
+    delay_cycles(32000); /* 1ms 稳定 */
 }

@@ -138,7 +138,7 @@ void LCD_Init(void)
     LCD_WR_REG(0x3A);           /* Pixel Format: 16-bit */
     LCD_WR_DATA8(0x05);
     LCD_WR_REG(0x36);           /* MADCTL: 方向 */
-    LCD_WR_DATA8(0x78);         /* 横屏 */
+    LCD_WR_DATA8(0x78);         /* 横屏 (与工作项目一致) */
     LCD_WR_REG(0x21);           /* Display Inversion */
     LCD_WR_REG(0x29);           /* Display On */
 

@@ -14,8 +14,15 @@ const ADC12  = scripting.addModule("/ti/driverlib/ADC12", {}, false);
 const ADC121 = ADC12.addInstance();
 const GPIO   = scripting.addModule("/ti/driverlib/GPIO", {}, false);
 const GPIO_Grey  = GPIO.addInstance();
-const GPIO_LCD_A = GPIO.addInstance();
-const GPIO_LCD_B = GPIO.addInstance();
+const GPIO_DAT   = GPIO.addInstance();
+const GPIO_BLK   = GPIO.addInstance();
+const GPIO_CS    = GPIO.addInstance();
+const GPIO_DC    = GPIO.addInstance();
+const GPIO_RES   = GPIO.addInstance();
+const GPIO_MOSI  = GPIO.addInstance();
+const GPIO_SCLK  = GPIO.addInstance();
+const GPIO_I2C_SCL = GPIO.addInstance();
+const GPIO_I2C_SDA = GPIO.addInstance();
 const TIMER  = scripting.addModule("/ti/driverlib/TIMER", {}, false);
 const TIMER1 = TIMER.addInstance();
 const Board  = scripting.addModule("/ti/driverlib/Board", {}, false);
@@ -46,35 +53,69 @@ ADC121.sampClkDiv                        = "DL_ADC12_CLOCK_DIVIDE_8";
 ADC121.powerDownMode                     = "DL_ADC12_POWER_DOWN_MODE_MANUAL";
 ADC121.sampleTime0                       = "125 us";
 
-/* ---- GPIO: 灰度传感器模拟开关地址线 ---- */
+/* ---- GPIO: 灰度传感器 CLK (PA24, 输出) ---- */
 GPIO_Grey.$name                         = "Grey";
-GPIO_Grey.associatedPins.create(3);
+GPIO_Grey.associatedPins.create(1);
 GPIO_Grey.associatedPins[0].$name       = "AD0";
 GPIO_Grey.associatedPins[0].pin.$assign = "PA24";
-GPIO_Grey.associatedPins[1].$name       = "AD1";
-GPIO_Grey.associatedPins[1].pin.$assign = "PA25";
-GPIO_Grey.associatedPins[2].$name       = "AD2";
-GPIO_Grey.associatedPins[2].pin.$assign = "PA26";
 
-/* ---- GPIO: LCD 软件 SPI (Port A: RST/DC/CS) ---- */
-GPIO_LCD_A.$name                         = "LCD_A";
-GPIO_LCD_A.associatedPins.create(3);
-GPIO_LCD_A.associatedPins[0].$name       = "RST";
-GPIO_LCD_A.associatedPins[0].pin.$assign = "PA23";
-GPIO_LCD_A.associatedPins[1].$name       = "DC";
-GPIO_LCD_A.associatedPins[1].pin.$assign = "PA28";
-GPIO_LCD_A.associatedPins[2].$name       = "CS";
-GPIO_LCD_A.associatedPins[2].pin.$assign = "PA31";
+/* ---- GPIO: 灰度传感器 DAT (PA25, 输入上拉) ---- */
+GPIO_DAT.$name                               = "DAT";
+GPIO_DAT.port                                = "PORTA";
+GPIO_DAT.associatedPins[0].$name             = "PIN_25";
+GPIO_DAT.associatedPins[0].direction         = "INPUT";
+GPIO_DAT.associatedPins[0].internalResistor  = "NONE";
+GPIO_DAT.associatedPins[0].assignedPin       = "25";
 
-/* ---- GPIO: LCD 软件 SPI (Port B: SCK/MOSI/BLK) ---- */
-GPIO_LCD_B.$name                         = "LCD_B";
-GPIO_LCD_B.associatedPins.create(3);
-GPIO_LCD_B.associatedPins[0].$name       = "SCK";
-GPIO_LCD_B.associatedPins[0].pin.$assign = "PB20";
-GPIO_LCD_B.associatedPins[1].$name       = "MOSI";
-GPIO_LCD_B.associatedPins[1].pin.$assign = "PB12";
-GPIO_LCD_B.associatedPins[2].$name       = "BLK";
-GPIO_LCD_B.associatedPins[2].pin.$assign = "PB19";
+/* ---- GPIO: LCD 背光 BLK (PB19, 低电平点亮) ---- */
+GPIO_BLK.$name                         = "BLK";
+GPIO_BLK.port                          = "PORTB";
+GPIO_BLK.associatedPins[0].$name       = "PIN_19";
+GPIO_BLK.associatedPins[0].assignedPin = "19";
+
+/* ---- GPIO: LCD 片选 CS (PA23) ---- */
+GPIO_CS.$name                          = "CS";
+GPIO_CS.port                           = "PORTA";
+GPIO_CS.associatedPins[0].$name        = "PIN_23";
+GPIO_CS.associatedPins[0].assignedPin  = "23";
+
+/* ---- GPIO: LCD 数据/命令 DC (PB24) ---- */
+GPIO_DC.$name                          = "DC";
+GPIO_DC.port                           = "PORTB";
+GPIO_DC.associatedPins[0].$name        = "PIN_24";
+GPIO_DC.associatedPins[0].assignedPin  = "24";
+
+/* ---- GPIO: LCD 复位 RES (PB20) ---- */
+GPIO_RES.$name                         = "RES";
+GPIO_RES.port                          = "PORTB";
+GPIO_RES.associatedPins[0].$name       = "PIN_20";
+GPIO_RES.associatedPins[0].assignedPin = "20";
+
+/* ---- GPIO: LCD 数据 MOSI (PA28) ---- */
+GPIO_MOSI.$name                        = "MOSI";
+GPIO_MOSI.port                         = "PORTA";
+GPIO_MOSI.associatedPins[0].$name      = "PIN_28";
+GPIO_MOSI.associatedPins[0].assignedPin = "28";
+
+/* ---- GPIO: LCD 时钟 SCLK (PA31) ---- */
+GPIO_SCLK.$name                        = "SCLK";
+GPIO_SCLK.port                         = "PORTA";
+GPIO_SCLK.associatedPins[0].$name      = "PIN_31";
+GPIO_SCLK.associatedPins[0].assignedPin = "31";
+
+/* ---- GPIO: 灰度传感器 I2C SCL (PA15, 开漏) ---- */
+GPIO_I2C_SCL.$name                          = "GRAY_SCL";
+GPIO_I2C_SCL.port                           = "PORTA";
+GPIO_I2C_SCL.associatedPins[0].$name        = "PIN_15";
+GPIO_I2C_SCL.associatedPins[0].initialValue = "SET";
+GPIO_I2C_SCL.associatedPins[0].assignedPin  = "15";
+
+/* ---- GPIO: 灰度传感器 I2C SDA (PA16, 开漏) ---- */
+GPIO_I2C_SDA.$name                          = "GRAY_SDA";
+GPIO_I2C_SDA.port                           = "PORTA";
+GPIO_I2C_SDA.associatedPins[0].$name        = "PIN_16";
+GPIO_I2C_SDA.associatedPins[0].initialValue = "SET";
+GPIO_I2C_SDA.associatedPins[0].assignedPin  = "16";
 
 /* ---- TIMER: TIMG0 1ms 周期中断 ---- */
 TIMER1.$name              = "TIMER_0";
@@ -85,3 +126,19 @@ TIMER1.timerClkPrescale   = 8;
 TIMER1.peripheral.$assign = "TIMG0";
 
 SYSCTL.forceDefaultClkConfig = true;
+
+/**
+ * Pinmux solution for unlocked pins/peripherals.
+ */
+GPIO_BLK.associatedPins[0].pin.$suggestSolution   = "PB19";
+GPIO_CS.associatedPins[0].pin.$suggestSolution    = "PA23";
+GPIO_DC.associatedPins[0].pin.$suggestSolution    = "PB24";
+GPIO_RES.associatedPins[0].pin.$suggestSolution   = "PB20";
+GPIO_MOSI.associatedPins[0].pin.$suggestSolution  = "PA28";
+GPIO_SCLK.associatedPins[0].pin.$suggestSolution  = "PA31";
+GPIO_I2C_SCL.associatedPins[0].pin.$suggestSolution = "PA15";
+GPIO_I2C_SDA.associatedPins[0].pin.$suggestSolution = "PA16";
+GPIO_DAT.associatedPins[0].pin.$suggestSolution     = "PA25";
+Board.peripheral.$suggestSolution                 = "DEBUGSS";
+Board.peripheral.swclkPin.$suggestSolution        = "PA20";
+Board.peripheral.swdioPin.$suggestSolution        = "PA19";
