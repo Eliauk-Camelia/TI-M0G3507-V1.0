@@ -10,10 +10,21 @@
  * Import the modules used in this configuration.
  */
 const SYSCTL = scripting.addModule("/ti/driverlib/SYSCTL");
+const ADC12  = scripting.addModule("/ti/driverlib/ADC12", {}, false);
+const ADC121 = ADC12.addInstance();
+const GPIO   = scripting.addModule("/ti/driverlib/GPIO", {}, false);
+const GPIO_Grey  = GPIO.addInstance();
+const GPIO_LCD_A = GPIO.addInstance();
+const GPIO_LCD_B = GPIO.addInstance();
+const TIMER  = scripting.addModule("/ti/driverlib/TIMER", {}, false);
+const TIMER1 = TIMER.addInstance();
+const Board  = scripting.addModule("/ti/driverlib/Board", {}, false);
 
 /**
  * Write custom configuration values to the imported modules.
  */
+
+/* ---- 时钟树: 32 MHz CPUCLK ---- */
 const divider7       = system.clockTree["PLL_PDIV"];
 divider7.divideValue = 2;
 
@@ -26,16 +37,51 @@ multiplier2.multiplyValue = 5;
 const mux8       = system.clockTree["HSCLKMUX"];
 mux8.inputSelect = "HSCLKMUX_SYSPLL2X";
 
+/* ---- ADC12: 灰度传感器 (PA27, 单通道, 软件触发, 轮询模式) ---- */
+ADC121.$name                             = "Grey_ADC";
+ADC121.peripheral.$assign                = "ADC0";
+ADC121.peripheral.adcPin0.$assign        = "PA27";
+ADC121.sampClkSrc                        = "DL_ADC12_CLOCK_ULPCLK";
+ADC121.sampClkDiv                        = "DL_ADC12_CLOCK_DIVIDE_8";
+ADC121.powerDownMode                     = "DL_ADC12_POWER_DOWN_MODE_MANUAL";
+ADC121.sampleTime0                       = "125 us";
+
+/* ---- GPIO: 灰度传感器模拟开关地址线 ---- */
+GPIO_Grey.$name                         = "Grey";
+GPIO_Grey.associatedPins.create(3);
+GPIO_Grey.associatedPins[0].$name       = "AD0";
+GPIO_Grey.associatedPins[0].pin.$assign = "PA24";
+GPIO_Grey.associatedPins[1].$name       = "AD1";
+GPIO_Grey.associatedPins[1].pin.$assign = "PA25";
+GPIO_Grey.associatedPins[2].$name       = "AD2";
+GPIO_Grey.associatedPins[2].pin.$assign = "PA26";
+
+/* ---- GPIO: LCD 软件 SPI (Port A: RST/DC/CS) ---- */
+GPIO_LCD_A.$name                         = "LCD_A";
+GPIO_LCD_A.associatedPins.create(3);
+GPIO_LCD_A.associatedPins[0].$name       = "RST";
+GPIO_LCD_A.associatedPins[0].pin.$assign = "PA23";
+GPIO_LCD_A.associatedPins[1].$name       = "DC";
+GPIO_LCD_A.associatedPins[1].pin.$assign = "PA28";
+GPIO_LCD_A.associatedPins[2].$name       = "CS";
+GPIO_LCD_A.associatedPins[2].pin.$assign = "PA31";
+
+/* ---- GPIO: LCD 软件 SPI (Port B: SCK/MOSI/BLK) ---- */
+GPIO_LCD_B.$name                         = "LCD_B";
+GPIO_LCD_B.associatedPins.create(3);
+GPIO_LCD_B.associatedPins[0].$name       = "SCK";
+GPIO_LCD_B.associatedPins[0].pin.$assign = "PB20";
+GPIO_LCD_B.associatedPins[1].$name       = "MOSI";
+GPIO_LCD_B.associatedPins[1].pin.$assign = "PB12";
+GPIO_LCD_B.associatedPins[2].$name       = "BLK";
+GPIO_LCD_B.associatedPins[2].pin.$assign = "PB19";
+
+/* ---- TIMER: TIMG0 1ms 周期中断 ---- */
+TIMER1.$name              = "TIMER_0";
+TIMER1.timerClkSrc        = "BUSCLK";
+TIMER1.timerPeriod        = "1 ms";
+TIMER1.interrupts         = ["ZERO"];
+TIMER1.timerClkPrescale   = 8;
+TIMER1.peripheral.$assign = "TIMG0";
+
 SYSCTL.forceDefaultClkConfig = true;
-
-const Board = scripting.addModule("/ti/driverlib/Board", {}, false);
-
-/**
- * Pinmux solution for unlocked pins/peripherals. This ensures that minor changes to the automatic solver in a future
- * version of the tool will not impact the pinmux you originally saw.  These lines can be completely deleted in order to
- * re-solve from scratch.
- */
-SYSCTL.peripheral.$suggestSolution         = "SYSCTL";
-Board.peripheral.$suggestSolution          = "DEBUGSS";
-Board.peripheral.swclkPin.$suggestSolution = "PA20";
-Board.peripheral.swdioPin.$suggestSolution = "PA19";

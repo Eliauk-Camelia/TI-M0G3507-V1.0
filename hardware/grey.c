@@ -38,8 +38,8 @@ static void __toggle_GPIO(CHANNEL_t channel)
             // 非法通道，保持全部低电平
             break;
     }
-    // 增加建立延时，模拟开关电压稳定（MSPM0标准延时接口）
-    __delay_cycles(1500);
+    // 增加建立延时，模拟开关电压稳定（DriverLib 延时接口）
+    delay_cycles(1500);
 }
 
 /**
@@ -48,10 +48,10 @@ static void __toggle_GPIO(CHANNEL_t channel)
  */
 static uint16_t __read_adc(void)
 {
-    DL_ADC_startConversion(&adcGreyHandle, DL_ADC_SINGLE_CHANNEL);
-    // 阻塞等待转换完成
-    while (!DL_ADC_isConversionComplete(&adcGreyHandle));
-    uint16_t adcRaw = DL_ADC_getResult(&adcGreyHandle);
+    DL_ADC12_startConversion(Grey_ADC_INST);
+    /* 轮询等待转换完成 (BUSY 位清零) */
+    while (DL_ADC12_getStatus(Grey_ADC_INST) & DL_ADC12_STATUS_CONVERSION_ACTIVE);
+    uint16_t adcRaw = DL_ADC12_getMemResult(Grey_ADC_INST, Grey_ADC_ADCMEM_0);
     return adcRaw;
 }
 

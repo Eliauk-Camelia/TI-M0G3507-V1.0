@@ -28,24 +28,27 @@
 #define LCD_H  80
 #endif
 
-/* ---- 软件 SPI 引脚宏 (GPIO 位操作) ---- */
-#define LCD_SCK_Clr()  DL_GPIO_clearPins(LCDSCK_PORT, LCDSCK_B20_PIN)
-#define LCD_SCK_Set()  DL_GPIO_setPins(LCDSCK_PORT, LCDSCK_B20_PIN)
+/* ---- 软件 SPI 引脚宏 — 使用 SysConfig 生成的 GPIO 宏 ---- */
+/* LCD_A = Port A: RST(PA23) / DC(PA28) / CS(PA31)                 */
+/* LCD_B = Port B: SCK(PB20) / MOSI(PB12) / BLK(PB19)              */
 
-#define LCD_MOSI_Clr() DL_GPIO_clearPins(LCDMOSI_PORT, LCDMOSI_B12_PIN)
-#define LCD_MOSI_Set() DL_GPIO_setPins(LCDMOSI_PORT, LCDMOSI_B12_PIN)
+#define LCD_SCK_Clr()  DL_GPIO_clearPins(LCD_B_PORT, LCD_B_SCK_PIN)
+#define LCD_SCK_Set()  DL_GPIO_setPins(LCD_B_PORT, LCD_B_SCK_PIN)
 
-#define LCD_RES_Clr()  DL_GPIO_clearPins(LCDRST_PORT, LCDRST_A23_PIN)
-#define LCD_RES_Set()  DL_GPIO_setPins(LCDRST_PORT, LCDRST_A23_PIN)
+#define LCD_MOSI_Clr() DL_GPIO_clearPins(LCD_B_PORT, LCD_B_MOSI_PIN)
+#define LCD_MOSI_Set() DL_GPIO_setPins(LCD_B_PORT, LCD_B_MOSI_PIN)
 
-#define LCD_DC_Clr()   DL_GPIO_clearPins(LCDDC_PORT, LCDDC_A28_PIN)
-#define LCD_DC_Set()   DL_GPIO_setPins(LCDDC_PORT, LCDDC_A28_PIN)
+#define LCD_RES_Clr()  DL_GPIO_clearPins(LCD_A_PORT, LCD_A_RST_PIN)
+#define LCD_RES_Set()  DL_GPIO_setPins(LCD_A_PORT, LCD_A_RST_PIN)
 
-#define LCD_CS_Clr()   DL_GPIO_clearPins(LCDCS_PORT, LCDCS_A31_PIN)
-#define LCD_CS_Set()   DL_GPIO_setPins(LCDCS_PORT, LCDCS_A31_PIN)
+#define LCD_DC_Clr()   DL_GPIO_clearPins(LCD_A_PORT, LCD_A_DC_PIN)
+#define LCD_DC_Set()   DL_GPIO_setPins(LCD_A_PORT, LCD_A_DC_PIN)
 
-#define LCD_BLK_Clr()  DL_GPIO_clearPins(LCDBLK_PORT, LCDBLK_B19_PIN)
-#define LCD_BLK_Set()  DL_GPIO_setPins(LCDBLK_PORT, LCDBLK_B19_PIN)
+#define LCD_CS_Clr()   DL_GPIO_clearPins(LCD_A_PORT, LCD_A_CS_PIN)
+#define LCD_CS_Set()   DL_GPIO_setPins(LCD_A_PORT, LCD_A_CS_PIN)
+
+#define LCD_BLK_Clr()  DL_GPIO_clearPins(LCD_B_PORT, LCD_B_BLK_PIN)
+#define LCD_BLK_Set()  DL_GPIO_setPins(LCD_B_PORT, LCD_B_BLK_PIN)
 
 /* ---- API ---- */
 void LCD_Writ_Bus(uint8_t dat);
