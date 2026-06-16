@@ -39,7 +39,7 @@ int main(void)
     SYSCFG_DL_init();
 
     LCD_Init();                              /* 初始化 ST7735S LCD */
-
+    
     NVIC_EnableIRQ(TIMER_0_INST_INT_IRQN);   /* 使能 1ms 定时中断 */
     DL_TimerG_startCounter(TIMER_0_INST);    /* 启动 TIMG0 递减计数 */
 
@@ -48,6 +48,7 @@ int main(void)
     }
 }
 
+// 定时器1ms 中断
 void TIMER_0_INST_IRQHandler(void)
 {
     switch (DL_TimerG_getPendingInterrupt(TIMER_0_INST)) {
