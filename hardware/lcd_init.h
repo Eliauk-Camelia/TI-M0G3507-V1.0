@@ -9,6 +9,7 @@
  * 背光: PNP 三极管 (SS8550), 低电平点亮, 高电平关闭
  */
 
+
 #ifndef __LCD_INIT_H
 #define __LCD_INIT_H
 
