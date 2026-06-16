@@ -37,7 +37,6 @@ volatile uint32_t g_tick_ms = 0;  /* 1ms 系统滴答计数器, 由 TIMER_0 ISR 
 int main(void)
 {
     SYSCFG_DL_init();
-<<<<<<< Updated upstream
 
     LCD_Init();                              /* 初始化 ST7735S LCD */
 
