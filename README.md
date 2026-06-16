@@ -1,16 +1,16 @@
 # TI-M0G3507-V1.0
 
-基于 TI MSPM0G3507 的嵌入式固件工程，集成灰度传感器采集、ST7735S LCD 显示与 1ms 系统滴答定时器。
+基于 TI MSPM0G3507 的嵌入式固件工程，集成感为灰度传感器（串行模式）+ ST7735S LCD 实时显示。
 
 ## 硬件平台
 
 | 项目 | 说明 |
 |------|------|
-| **MCU** | MSPM0G3507 (Cortex-M0+, 80 MHz max) |
-| **开发板** | LP_MSPM0G3507 LaunchPad |
-| **调试器** | XDS110 (SWD) |
+| **MCU** | MSPM0G3507 (Cortex-M0+, 32 MHz) |
+| **开发板** | 天孟星 (LCKFB) MSPM0G3507 核心板 + 机器人扩展板 |
+| **调试器** | XDS110 (SWD: PA20=SWCLK, PA19=SWDIO) |
 | **LCD** | ST7735S (160×80, 横屏, RGB565) |
-| **ADC 外设** | 8 通道模拟开关 (CD4051) + 灰度传感器 |
+| **灰度传感器** | 感为 8 路灰度 + 辅助板 (串行 CLK+DAT 协议) |
 
 ## 工具链
 
@@ -42,56 +42,54 @@ SYSOSC (32 MHz) → SYSPLL ×2 → ÷2 → ÷2 → 32 MHz CPUCLK
 | SWCLK | PA20 | 调试时钟 |
 | SWDIO | PA19 | 调试数据 |
 
-### 灰度传感器 (ADC + 模拟开关)
+### 灰度传感器 (感为辅助板 串行模式)
 
-| 功能 | 引脚 | 说明 |
-|------|------|------|
-| ADC_IN | PA27 | ADC0 模拟输入 |
-| AD0 | PA24 | 模拟开关地址线 bit0 |
-| AD1 | PA25 | 模拟开关地址线 bit1 |
-| AD2 | PA26 | 模拟开关地址线 bit2 |
+| 功能 | 引脚 | 实例名 | 方向 | 说明 |
+|------|------|--------|------|------|
+| CLK | PA24 | Grey (AD0) | 输出 | 时钟信号, MCU 产生 |
+| DAT | PA25 | DAT (PIN_25) | 输入 NONE | 数据信号, 辅助板驱动, 悬浮输入 |
 
-- 8 路传感器通过 CD4051 切换，`grey.c` 中 `read_all_adc()` 一次读取全部 8 通道
-- ADC 模式：单次软件触发、轮询等待、12 位精度
+- 2 线串行协议：CLK 下降沿读 DAT, 上升沿辅助板更新下一位
+- **首时钟丢弃**：读取前先发一个 dummy 时钟周期, 否则数据右移一位
+- 返回 8 位数字量 (bit0~bit7 对应探头 1~8, 0=黑, 1=白)
+- 参考例程：`/home/arch/work-space/stm32-soace/感为灰度STM32F1xx标准库例程/`
+- 辅助板教程：https://www.bilibili.com/video/BV1ZdHSzCEGN/
 
 ### LCD (ST7735S 软件 SPI)
 
-| 功能 | 引脚 | 端口 |
-|------|------|------|
-| SCK  | PB20 | Port B |
-| MOSI | PB12 | Port B |
-| RST  | PA23 | Port A |
-| DC   | PA28 | Port A |
-| CS   | PA31 | Port A |
-| BLK  | PB19 | Port B (低电平点亮) |
+| 功能 | 引脚 | 实例名 | 说明 |
+|------|------|--------|------|
+| SCLK | PA31 | SCLK | 软件 SPI 时钟 |
+| MOSI | PA28 | MOSI | 软件 SPI 数据 |
+| CS   | PA23 | CS | 片选 (低有效) |
+| DC   | PB24 | DC | 数据/命令选择 |
+| RES  | PB20 | RES | 硬件复位 (低有效) |
+| BLK  | PB19 | BLK | 背光 PNP 管 (低电平点亮) |
 
-- 软件模拟 SPI 时序，使用 DriverLib GPIO 位操作
-- 横屏模式 (USE_HORIZONTAL=2)，分辨率 160×80
-
-### 系统定时器
-
-| 参数 | 值 |
-|------|-----|
-| 外设 | TIMG0 |
-| 周期 | 1 ms |
-| 时钟源 | BUSCLK / 8 (4 MHz) |
-| 中断 | ZERO 事件 |
+**关键注意：**
+- LCD 引脚使用**独立 GPIO 实例**，不可用分组 (`LCD_A`/`LCD_B`)
+- `lcd_init.h` 中的宏名必须与 SysConfig 实例名一致
+- MADCTL 固定为 `0x78` (横屏方向)
+- `LCD_ShowChar` 使用 LSB 优先 (`temp & 0x01`) 逐点绘制，避免字符镜像和 12px 字体错位
+- Mode=0 必须同时绘制背景像素，否则旧数据残留
 
 ## 项目结构
 
 ```
 TI-M0G3507-V1.0/
-├── empty.c              # 主程序入口 (main, ISR)
-├── empty.syscfg         # SysConfig 外设配置文件
+├── empty.c              # 主程序 — 灰度传感器串行读取 + LCD 显示
+├── empty.syscfg         # SysConfig 外设配置
 ├── hardware/
-│   ├── grey.c / grey.h         # 灰度传感器 ADC 读取
-│   ├── lcd.c / lcd.h           # ST7735S 绘图函数 (点/线/圆/文字/图片)
-│   ├── lcd_init.c / lcd_init.h # ST7735S 软件 SPI 驱动 + 初始化序列
-│   ├── lcdfont.h               # ASCII 字库 (12×6 / 16×8 / 24×12 / 32×16)
-│   └── delay.c / delay.h       # 毫秒/微秒忙等待延时
-├── Debug/               # 构建输出 (自动生成，勿手动修改)
-├── targetConfigs/       # CCS 调试配置 (XDS110)
-└── README.md
+│   ├── delay.h/c        # delay_ms/delay_us (delay_cycles 忙等待)
+│   ├── grey.h/c         # 灰度传感器串行接口驱动 (CLK+DAT)
+│   ├── gray.h/c         # 灰度传感器 I2C 驱动 (备用, 当前未使用)
+│   ├── sw_i2c.h/c       # 通用软件 I2C 驱动 (备用, 当前未使用)
+│   ├── lcd.h/c          # ST7735S 绘图函数 (Fill/Line/Circle/String/Int/Float)
+│   ├── lcd_init.h/c     # ST7735S 软件 SPI + 初始化序列
+│   ├── lcdfont.h        # ASCII 字库 (12×6 / 16×8 / 24×12 / 32×16)
+│   └── delay.h/c        # 毫秒/微秒忙等待延时
+├── Debug/               # 构建产物 (makefile 等, 自动生成)
+└── targetConfigs/       # XDS110 调试配置
 ```
 
 ## SysConfig 外设一览
@@ -99,11 +97,14 @@ TI-M0G3507-V1.0/
 | 模块 | 实例名 | 用途 |
 |------|--------|------|
 | SYSCTL | — | 时钟树 (32 MHz) |
-| ADC12 | Grey_ADC | 灰度传感器采样 (PA27) |
-| GPIO | Grey | 模拟开关地址线 (PA24/PA25/PA26) |
-| GPIO | LCD_A | LCD 控制线 Port A (RST/DC/CS) |
-| GPIO | LCD_B | LCD 控制线 Port B (SCK/MOSI/BLK) |
-| TIMER | TIMER_0 | 1ms 系统滴答 (TIMG0) |
+| GPIO | Grey | CLK 时钟输出 (PA24) |
+| GPIO | DAT | DAT 数据输入, 悬浮 (PA25) |
+| GPIO | BLK | LCD 背光 (PB19) |
+| GPIO | CS | LCD 片选 (PA23) |
+| GPIO | DC | LCD 数据/命令 (PB24) |
+| GPIO | RES | LCD 复位 (PB20) |
+| GPIO | MOSI | LCD 数据 (PA28) |
+| GPIO | SCLK | LCD 时钟 (PA31) |
 | Board | — | 调试接口 (PA19/PA20) |
 
 ## 构建与烧录
@@ -122,18 +123,14 @@ dslite -c targetConfigs/MSPM0G3507.ccxml -e -r 2 -u Debug/TI-M0G3507-V1.0.out
 ## 程序运行流程
 
 ```
-SYSCFG_DL_init()        ← SysConfig 生成的外设初始化
-    ├── 时钟 (32 MHz)
-    ├── GPIO (Grey/LCD_A/LCD_B 引脚输出)
-    ├── ADC12 (Grey_ADC 配置)
-    └── TIMER_0 (1ms 周期中断)
+SYSCFG_DL_init()           ← SysConfig 生成的时钟+GPIO 初始化
 
 main()
-    ├── LCD_Init()       ← ST7735S 初始化序列 + 清屏
-    ├── NVIC_EnableIRQ() ← 使能 1ms 定时中断
-    ├── DL_TimerG_startCounter()
-    └── while(1) {}      ← 主循环
-
-TIMER_0_INST_IRQHandler  ← 每 1ms 触发
-    └── g_tick_ms++
+    ├── LCD_Init()         ← ST7735S 初始化 + 清屏
+    ├── grey_init()        ← 灰度传感器串行模式唤醒
+    ├── LCD_Fill()         ← 清屏
+    └── while(1)
+        ├── grey_read_digital()   ← 读 8 路探头数字量 (0/1)
+        └── LCD 显示 4×2 网格数据
+            delay_ms(200)         ← 200ms 刷新间隔
 ```
