@@ -22,6 +22,8 @@ const TIMER  = scripting.addModule("/ti/driverlib/TIMER", {}, false);
 const TIMER1 = TIMER.addInstance();
 =======
 >>>>>>> Stashed changes
+=======
+>>>>>>> Stashed changes
 const Board  = scripting.addModule("/ti/driverlib/Board", {}, false);
 
 /**
@@ -90,6 +92,8 @@ TIMER1.interrupts         = ["ZERO"];
 TIMER1.timerClkPrescale   = 8;
 TIMER1.peripheral.$assign = "TIMG0";
 
+=======
+>>>>>>> Stashed changes
 =======
 >>>>>>> Stashed changes
 SYSCTL.forceDefaultClkConfig = true;

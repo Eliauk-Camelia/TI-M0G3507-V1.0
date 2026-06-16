@@ -47,6 +47,10 @@ int main(void)
     LCD_Init();
     
 >>>>>>> Stashed changes
+=======
+    LCD_Init();
+    
+>>>>>>> Stashed changes
     while (1) {
         /* 应用代码在此运行, g_tick_ms 每 1ms 自动递增 */
     }
