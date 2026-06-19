@@ -53,7 +53,7 @@ SYSOSC (32 MHz) → SYSPLL ×2 → ÷2 → ÷2 → 32 MHz CPUCLK
 - 2 线串行协议：CLK 下降沿读 DAT, 上升沿辅助板更新下一位
 - **首时钟丢弃**：读取前先发一个 dummy 时钟周期, 否则数据右移一位
 - 返回 8 位数字量 (bit0~bit7 对应探头 1~8, 0=黑, 1=白)
-- 参考：`/home/arch/work-space/stm32-soace/感为灰度STM32F1xx标准库例程/`
+- 参考：感为灰度 STM32F1xx 标准库例程
 
 ### MPU6050 (硬件 I2C)
 
@@ -67,7 +67,7 @@ SYSOSC (32 MHz) → SYSPLL ×2 → ÷2 → ÷2 → 32 MHz CPUCLK
 - 不使用 DMP (数字运动处理器), 直接读原始数据计算姿态
 - Pitch/Roll 由加速度计计算, Yaw 由陀螺仪 Z 轴积分
 - 读取频率: 10Hz (每 100ms)
-- 参考：`/home/arch/work-space/project-space/ProgramForCar-Main_Develop/`
+- 参考：MPU6050 官方寄存器手册 及 Motion Driver 移植参考
 
 ### LCD (ST7735S 软件 SPI)
 
@@ -153,3 +153,11 @@ main()
 - `internalResistor` 合法值: `NONE`, `PULL_UP`, `PULL_DOWN` (没有 `PULL_DISABLE`)
 - 生成宏名前缀: GPIO 实例用 `{name}_PORT/{name}_{pin}_PIN`, I2C 实例用 `GPIO_I2C_{name}_*`
 - CCS 重新生成 makefile 后会覆盖手动编辑，新文件需重新添加到 `ORDERED_OBJS`
+
+## 演示
+
+> TODO: 添加实物照片 / 演示视频 / 接线图
+
+## License
+
+MIT © 2026 Eliauk-Camelia
